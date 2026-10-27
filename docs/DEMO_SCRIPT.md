@@ -15,6 +15,6 @@ Prep once: `databricks bundle deploy -t dev -var=warehouse_id=...`, `python demo
 | 4:00 | App -> Request rollback -> `smct_rollback`; Jobs UI shows classic again | "Exact classic definition restored from backup." |
 | 4:20 | Create a duplicate scheduled clone by hand; `bundle run smct_guard`; **Schedule guard** tab | "Guard pauses it and logs why." (L10) |
 | 4:40 | **Cost** tab | "DBUs and list-price $ before/after per run, by team tag, from system tables." (L12) |
-| 4:55 | Terminal: `make test` | "71 offline tests incl. full lifecycle on a fake workspace." |
+| 4:55 | Terminal: `make test` | "74 offline tests incl. full lifecycle on a fake workspace." |
 
 Tips: pre-run the slow job and cut; keep the video <= 5:00; do not show workspace URLs or emails of colleagues.

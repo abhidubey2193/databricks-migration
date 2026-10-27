@@ -26,4 +26,4 @@ Legend - **Detect**: finding emitted with remediation text. **Fix**: SMCT change
 * Jobs with more than 100 tasks rely on the SDK following Jobs-API task pagination in `jobs.get` - confirm on a very large job.
 * Notebook `environment_key` support differs by Jobs-API release; `ENV_TASK_TYPES` in `transform.py` is the single switch.
 * Allowed `spark.conf.set` keys (`rules.ALLOWED_SPARK_CONFS`) follow the public docs at authoring time - edit the set if your release differs.
-* Verified offline by 71 unit tests against in-memory fakes. The SDK-facing layer (`db.py`) is deliberately thin, but it still needs a live-workspace run: follow `docs/VERIFICATION.md` and record the result there.
+* Verified offline by 74 unit tests against in-memory fakes. The SDK-facing layer (`db.py`) is deliberately thin, but it still needs a live-workspace run: follow `docs/VERIFICATION.md` and record the result there.

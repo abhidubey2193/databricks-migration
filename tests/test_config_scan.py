@@ -60,3 +60,31 @@ class Fleet(unittest.TestCase):
         self.assertLess([r["workload_id"] for r in w1].index("job:2"), [r["workload_id"] for r in w1].index("job:3"))
         self.assertEqual(rows[-1]["wave"], -1)
         self.assertEqual(summarize(rows)["TOTAL"], 22)
+
+
+class ResolveCatalog(unittest.TestCase):
+    """Default catalog differs per workspace (main vs workspace on Free Edition)."""
+    class _DF:
+        def __init__(s, rows): s.rows = rows
+        def collect(s): return s.rows
+
+    def _spark(self, names, current, fail=False):
+        outer = self
+        class S:
+            def sql(s, q):
+                if fail:
+                    raise RuntimeError("no uc")
+                return outer._DF([(n,) for n in names] if "SHOW CATALOGS" in q else [(current,)])
+        return S()
+
+    def test_keeps_existing_catalog(self):
+        from smc.store import resolve_catalog
+        self.assertEqual(resolve_catalog(self._spark(["main", "system"], "main"), "main"), "main")
+
+    def test_falls_back_to_current_catalog(self):
+        from smc.store import resolve_catalog
+        self.assertEqual(resolve_catalog(self._spark(["samples", "system", "workspace"], "workspace"), "main"), "workspace")
+
+    def test_never_raises_when_unity_catalog_unavailable(self):
+        from smc.store import resolve_catalog
+        self.assertEqual(resolve_catalog(self._spark([], "x", fail=True), "main"), "main")

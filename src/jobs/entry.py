@@ -23,10 +23,11 @@ def main():
 
     from pyspark.sql import SparkSession
     spark = SparkSession.builder.getOrCreate()
-    from smc.store import Store
+    from smc.store import Store, resolve_catalog
     from smc import pipeline
     from smc.db import Workspace
 
+    cfg.catalog = resolve_catalog(spark, cfg.catalog)
     store = Store(spark, cfg.catalog, cfg.schema)
     store.ensure()
     if ns.stage == "init":

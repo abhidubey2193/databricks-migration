@@ -35,7 +35,7 @@ Databricks components used: Asset Bundles, Jobs (serverless), Unity Catalog sche
 How to deploy (commands or steps):
 databricks bundle deploy -t dev -var="warehouse_id=<id>" -var="catalog=<catalog>"; databricks bundle run smct_discover -t dev; databricks bundle run smct_app -t dev   (full steps in README)
 
-What is tested and how: 71 offline unit tests (scanners, rewriters incl. ast-validity, transformer, scoring policy on a 22-job synthetic fleet, A/B diff against a fake SQL engine, full lifecycle incl. drift/rollback/guard against a fake workspace) + live run on <cloud> per docs/VERIFICATION.md.
+What is tested and how: 74 offline unit tests (scanners, rewriters incl. ast-validity, transformer, scoring policy on a 22-job synthetic fleet, A/B diff against a fake SQL engine, full lifecycle incl. drift/rollback/guard against a fake workspace) + live run on <cloud> per docs/VERIFICATION.md.
 
 Known gaps and what you would do next: see docs/LIMITATIONS.md (division/element_at not auto-rewritten, %run not followed, A/B assumes idempotent jobs, path-based outputs need a tag). Next: AST-based SQL rewriting, follow %run, Lakeflow/DLT pipelines, multi-workspace fleet.
 

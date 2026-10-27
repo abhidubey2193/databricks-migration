@@ -16,6 +16,23 @@ def _cols(ddl: str) -> List[str]:
     return [p.strip().split()[0] for p in ddl.replace("\n", " ").split(",") if p.strip()]
 
 
+def resolve_catalog(spark, wanted: str) -> str:
+    """Use `wanted` if that Unity Catalog catalog exists, else the session's current catalog.
+
+    The default catalog name differs per workspace (`main` on most, `workspace` on Databricks Free Edition), so a
+    hard-coded default must never make discovery fail with NO_SUCH_CATALOG.
+    """
+    try:
+        names = {r[0] for r in spark.sql("SHOW CATALOGS").collect()}
+        current = spark.sql("SELECT current_catalog()").collect()[0][0]
+    except Exception:
+        return wanted
+    if wanted and wanted in names:
+        return wanted
+    print(f"[smct] catalog '{wanted}' not found; using current catalog '{current}'")
+    return current
+
+
 class Store:
     def __init__(self, spark, catalog: str, schema: str):
         self.spark, self.catalog, self.schema = spark, catalog, schema

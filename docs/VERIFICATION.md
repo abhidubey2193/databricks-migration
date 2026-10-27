@@ -1,4 +1,25 @@
-# Live-workspace verification log (fill in before submitting)
+# Live-workspace verification log
+
+## Run 1 - 2026-10-27, Databricks Free Edition (AWS-hosted `*.cloud.databricks.com`), serverless notebook compute
+
+Free Edition has **serverless compute only** (no classic clusters, no classic jobs), so only part of the checklist can be exercised there.
+
+| Check | Result |
+|---|---|
+| Full unit suite (`unittest discover`) run from the workspace Git folder on serverless | **PASS** - 71 tests (74 after the catalog fix below) |
+| Offline fleet scan CLI on the synthetic fleet inside the workspace | **PASS** - same ranking/verdicts as the dev machine |
+| `pipeline.discover` against the real Jobs/Clusters API through `db.Workspace` (SDK auth from the notebook) | **PASS** after fix - listed 6 jobs, wrote `workloads`, `findings`, `scan_history` and the status/cost views to `workspace.smct` |
+| Classification of the 6 real jobs | All `ALREADY_SERVERLESS` (they were serverless already) |
+| Clone / A-B / promote / rollback / guard on real classic jobs | **NOT TESTED** - needs a workspace with classic compute |
+| Bundle deploy + Databricks App | **NOT TESTED** - needs the CLI |
+| Cost views over `system.billing.*` | **NOT TESTED** |
+
+Defects found by the live run (both fixed):
+1. Default catalog `main` does not exist on every workspace (`workspace` on Free Edition) -> `NO_SUCH_CATALOG`. Fixed by `store.resolve_catalog`, used by the job entrypoint (tests added). When deploying the bundle on such a workspace also pass `-var="catalog=workspace"` and set `SMC_CATALOG` in `app.yaml`.
+2. Importing the package from a Git folder inside a notebook needs `importlib.invalidate_caches()` after adding `src` to `sys.path` (workspace files are not visible to the import cache otherwise). Jobs are unaffected (fresh interpreter).
+
+## Full checklist (run on a workspace that has classic jobs)
+
 
 The offline suite proves the logic; this checklist proves the SDK edges in *your* workspace. Record cloud, region, date, DBR/serverless environment version.
 

@@ -32,7 +32,7 @@ Prerequisites: Unity Catalog, a SQL warehouse, Databricks CLI >= 0.250 authentic
 
 ```bash
 git clone <this repo> && cd serverless-migration-control-tower
-python -m unittest discover -s tests -t .                 # 71 offline tests, no workspace needed
+python -m unittest discover -s tests -t .                 # 74 offline tests, no workspace needed
 make scan-demo                                            # offline fleet report on 22 synthetic jobs
 
 databricks bundle validate -t dev
@@ -73,7 +73,7 @@ app/app.py, app.yaml                 Streamlit app: overview, fleet, approvals (
 src/smc/                             stdlib-only core:  code_scan  config_scan  initscripts  scoring  transform
                                      ab_diff  drift  guard  state  sql | SDK/Spark edges: db  store  pipeline
 src/jobs/entry.py                    single job entrypoint (--stage ...)
-tests/                               71 tests: scanners, rewriters, transformer, scoring policy, A/B diff, lifecycle (fake workspace)
+tests/                               74 tests: scanners, rewriters, transformer, scoring policy, A/B diff, lifecycle (fake workspace)
 demo/                                fixture generator, workspace seeder, demo script
 docs/                                ARCHITECTURE, LIMITATIONS (L1-L13 matrix + known gaps), RUNBOOK, VERIFICATION, DEMO_SCRIPT, SUBMISSION_EMAIL
 ```
