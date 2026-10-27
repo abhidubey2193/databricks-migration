@@ -1,42 +1,48 @@
-To: <submission email address from the challenge brief>
+To: <submission address from the challenge brief>
 Subject: Serverless Challenge - Submission - <your name>
 
 Serverless Migration Challenge - Submission
 
-Name(s) and team: <fill>
-Repo link and final commit SHA (Option A) or zip file name (Option B): <private GitHub repo URL> @ <git rev-parse HEAD>   (Admin access granted to Nivethan2893, diggibyte, veerabadrachari-diggibyte)
-Demo video link: <fill>
-Cloud tested on (AWS / Azure / GCP): <fill - only what you actually ran, see docs/VERIFICATION.md>
+Name(s) and team: <fill in>
+Repo and final commit SHA: <private GitHub repo URL> @ <output of git rev-parse HEAD>
+Admin access given to: Nivethan2893, diggibyte, veerabadrachari-diggibyte
+Demo video: <link>
+Cloud tested on: <AWS / Azure / GCP. Write only what you actually ran. See docs/VERIFICATION.md>
 
-Limitations addressed (IDs, e.g. L1, L3, L8): L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11, L12, L13
-For each one, 1-2 lines on how:
-- L1: Inventory of all jobs + all-purpose clusters -> 0-100 readiness score, verdict, wave plan ranked by 30-day DBUs; Delta tables + Databricks App with overview, burn-down, fleet drill-down, two-gate approval workflow, audit trail, validation, cost, guard log.
-- L2: Own deterministic transformer with no task cap (tested at 25/40 tasks) plus optional dependency-ordered batches of N tasks migrated in place (mixed compute).
-- L3: Reads init scripts from DBFS/Volumes/Workspace/S3, translates pip installs into the serverless environment spec, flags apt/yum/wget/classpath lines as blockers, unreadable = blocker.
-- L4: Detects custom image, ML runtime, DBR<13, instance profile/storage creds in conf, spark-submit; classifies keep-on-classic vs manual; mixed jobs migrate partially.
-- L5: pypi/whl/requirements mapped to per-dependency-set environments; egg/jar/maven/cran/DBFS wheels flagged and left on classic.
-- L6: Static scan + automated rewrites: cache/persist removed, checkpoint -> Delta, global temp views -> temp views, mount calls removed + /mnt paths -> UC Volumes via mount_map, CACHE TABLE handled; RDD/conf detected.
-- L7: Scala/R detected; Scala classified (SQL / PySpark with draft / keep on classic); R and JAR keep on classic.
-- L8: Classic vs serverless A/B (sandbox schema mode or opt-in restore mode) with schema, count, EXCEPT ALL, aggregate-drift and runtime comparison; promotion impossible without a passing validation.
-- L9: Git-ready bundle YAML + diff on every promotion, bundle/git jobs flagged, settings-hash drift check aborts promotion.
-- L10: Clones are created without any trigger; guard job pauses duplicates (incl. manual clones), dry-run + log.
-- L11: Every dropped cluster attribute (conf, env vars, log delivery, SSH, policy, init scripts) reported per workload.
-- L12: Views over system.billing.usage + list_prices: per job/day/team, before vs after promotion per run.
-- L13: availableNow trigger auto-inserted/replaced; CAST->try_cast auto-rewrite (or ansi=disable mode); division/element_at/to_date/::cast detected with try_* suggestions.
+Limitations covered: L1 to L13. Short version of how:
 
-Architecture (max 5 lines):
-Pure-Python core (scanners, rewriters, transformer, scorer, A/B diff, drift, guard) -> thin SDK/Spark edges -> 6 serverless jobs sharing one entrypoint.
-State lives in Delta (workloads, findings, append-only migration_events, validation_results, views for status + cost).
-A Databricks App reads the tables through a SQL warehouse and writes approval events; a state machine enforces the two human gates.
-Originals are never modified: clones + rewritten notebook copies; backup JSON enables exact rollback.
+- L1: Scans all jobs and all-purpose clusters, scores each 0-100, assigns a verdict and a wave, and ranks by 30-day DBUs. Everything is in Delta tables and a Databricks App with overview, burn-down, fleet detail, two approval gates, audit trail, validation, cost and guard log.
+- L2: Own transformer with no task cap (tested at 25 and 40 tasks), plus optional dependency-ordered batches of N tasks for mixed compute.
+- L3: Reads init scripts from DBFS, Volumes, Workspace and S3, turns pip installs into the serverless environment, and flags apt/yum/wget/classpath lines as blockers. An unreadable script is a blocker.
+- L4: Detects custom images, ML runtimes, old DBR, instance profiles and storage credentials, and spark-submit. Each is classed as keep-on-classic or manual. Mixed jobs migrate in part.
+- L5: PyPI, wheel and requirements libraries map to per-dependency-set environments. Egg, jar, maven, cran and DBFS wheels are flagged and stay on classic.
+- L6: Rewrites cache/persist, checkpoint, global temp views, mount calls and /mnt paths (to Volumes via a mount map). RDD use and disallowed confs are detected.
+- L7: Detects Scala and R. Scala is classified as SQL rewrite, PySpark draft, or keep on classic. R and JAR stay on classic.
+- L8: A/B comparison (schema, counts, EXCEPT ALL, aggregate drift, runtime) between a throwaway classic copy and the serverless clone. Sandbox mode by default, restore mode opt-in. Promotion is blocked without a passing validation.
+- L9: Every promotion emits bundle YAML and a diff. Bundle-managed and Git-sourced jobs are flagged, and a settings hash stops promotion if the job changed after cloning.
+- L10: Clones are created with no trigger at all. A guard job pauses duplicates, including ones made by hand, with a dry-run and a log.
+- L11: Every cluster attribute that gets dropped is reported per workload. Literal secrets in a job definition block cloning and promotion.
+- L12: Views over system.billing.usage and list_prices, per job, day and team, with before/after per run.
+- L13: Streaming triggers become availableNow, CAST becomes try_cast (or ansi=disable mode). Division, element_at, to_date and :: casts are detected with a try_* suggestion.
 
-Databricks components used: Asset Bundles, Jobs (serverless), Unity Catalog schema/tables/views + grants, SQL warehouse, Databricks Apps, system.billing / list_prices, Delta (time travel/RESTORE/DEEP CLONE), Databricks SDK.
+Architecture:
+A core of plain-Python scanners, rewriters, a transformer, scoring, A/B diff, drift check and guard, with three thin modules for the SDK, Delta and orchestration.
+Six serverless jobs share one entrypoint. State is in Delta; status is the latest row in an append-only event table.
+The app reads through a SQL warehouse and writes approval events. A state machine enforces the two human gates.
+Originals are never changed: clones, rewritten notebook copies and a backup JSON for rollback.
 
-How to deploy (commands or steps):
-databricks bundle deploy -t dev -var="warehouse_id=<id>" -var="catalog=<catalog>"; databricks bundle run smct_discover -t dev; databricks bundle run smct_app -t dev   (full steps in README)
+Databricks pieces used: Asset Bundles, serverless Jobs, Unity Catalog (tables, views, grants), SQL warehouse, Databricks Apps, system.billing, Delta (RESTORE), the Databricks SDK.
 
-What is tested and how: 74 offline unit tests (scanners, rewriters incl. ast-validity, transformer, scoring policy on a 22-job synthetic fleet, A/B diff against a fake SQL engine, full lifecycle incl. drift/rollback/guard against a fake workspace) + live run on <cloud> per docs/VERIFICATION.md.
+Deploy:
+databricks bundle deploy -t dev -var="warehouse_id=<id>" -var="catalog=<catalog>"
+databricks bundle run smct_discover -t dev
+databricks bundle run smct_app -t dev
+(full steps in the README)
 
-Known gaps and what you would do next: see docs/LIMITATIONS.md (division/element_at not auto-rewritten, %run not followed, A/B assumes idempotent jobs, path-based outputs need a tag). Next: AST-based SQL rewriting, follow %run, Lakeflow/DLT pipelines, multi-workspace fleet.
+Testing, honestly:
+86 offline tests against in-memory fakes, including a full lifecycle. The same suite passes inside a Databricks workspace on serverless. Discovery has run against a real workspace (Free Edition). <Add here what you ran on a workspace with classic compute, or say it has not been run. See docs/VERIFICATION.md.>
 
-Confirmation: no customer data, credentials or client workspace details are included (Yes / No): Yes
+Known gaps: see docs/LIMITATIONS.md. Main ones: division/element_at are detected but not auto-rewritten, %run children aren't followed, the A/B check assumes the job is idempotent, and path-based outputs need a tag.
+Next: AST-based SQL rewriting, following %run, Lakeflow pipelines, more than one workspace.
+
+No customer data, credentials or client workspace details are included: Yes

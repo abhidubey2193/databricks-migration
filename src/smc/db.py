@@ -96,6 +96,9 @@ class Workspace:
               if getattr(js, f.name) is not None and f.name in allowed}
         return self.w.jobs.create(**kw).job_id
 
+    def delete_job(self, job_id: int) -> None:
+        self.w.jobs.delete(job_id=job_id)
+
     def reset_job(self, job_id: int, settings: Dict[str, Any]) -> None:
         self.w.jobs.reset(job_id=job_id, new_settings=self._settings(settings))
 

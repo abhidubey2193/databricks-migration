@@ -82,7 +82,7 @@ class Lifecycle(unittest.TestCase):
         self.assertEqual(self.store.latest_events()["job:2"]["event"], "PROMOTED")
         after = self.ws.get_job(2)["settings"]
         self.assertEqual(after["name"], "cache_heavy"); self.assertEqual(after["schedule"], before["schedule"])
-        self.assertNotIn("job_clusters", after); self.assertTrue(after["tasks"][0]["environment_key"])
+        self.assertNotIn("job_clusters", after); self.assertNotIn("new_cluster", after["tasks"][0])
         self.assertEqual(self.ws.get_job(self.clone_of("job:2"))["settings"].get("schedule"), None)
         self.assertTrue(self.store.last_event("job:2", "PROMOTED")["detail"]["bundle_yaml"] in self.ws.files)
         self.store.add_event("job:2", "ROLLBACK_REQUESTED", "boss"); pipeline.rollback(self.ws, self.store, self.cfg)
@@ -119,12 +119,15 @@ class ValidateSandbox(unittest.TestCase):
         self.eng = FakeEngine(); self.spark = FakeSpark(self.eng)
         self.ws = FakeWorkspace([job], d["notebooks"]); self.store = FakeStore(); self.cfg = Config(catalog="c", target_param="target_schema")
         self.serverless_rows = [(1, 2.0), (2, 3.0)]
+        self.ran = []
         ws = self.ws
         def run_and_wait(job_id, params=None, timeout_h=3):
             schema = params["target_schema"]
-            rows = [(1, 2.0), (2, 3.0)] if job_id == 1 else self.serverless_rows
+            is_baseline = (ws.jobs[job_id]["settings"].get("tags") or {}).get("smct_baseline") == "true"
+            self.ran.append(("baseline" if is_baseline else "clone", job_id))
+            rows = [(1, 2.0), (2, 3.0)] if is_baseline else self.serverless_rows
             self.eng.put(f"{schema}.out", [("id", "bigint"), ("v", "double")], rows)
-            return {"run_id": str(job_id), "result": "SUCCESS", "seconds": 100.0 if job_id == 1 else 40.0}
+            return {"run_id": str(job_id), "result": "SUCCESS", "seconds": 100.0 if is_baseline else 40.0}
         ws.run_and_wait = run_and_wait
         self.store.add_event("job:1", "APPROVED"); pipeline.migrate(ws, self.store, self.cfg)
     def test_pass(self):
@@ -140,3 +143,55 @@ class ValidateSandbox(unittest.TestCase):
         pipeline.validate(self.ws, self.store, self.cfg, self.spark)
         e = self.store.latest_events()["job:1"]; self.assertEqual(e["event"], "VALIDATION_FAILED")
         self.assertTrue("output tables" in e["detail"]["error"] or "allow_restore" in e["detail"]["error"])
+
+    def test_validation_never_runs_the_production_job(self):
+        pipeline.validate(self.ws, self.store, self.cfg, self.spark)
+        self.assertNotIn(1, [j for _, j in self.ran])                      # original job id is never run
+        self.assertEqual(sorted(k for k, _ in self.ran), ["baseline", "clone"])
+        self.assertFalse([j for j in self.ws.jobs.values() if (j["settings"].get("tags") or {}).get("smct_baseline")])  # cleaned up
+
+    def test_baseline_copy_is_silent_and_unscheduled(self):
+        from smc.transform import baseline_settings
+        s = {"name": "n", "schedule": {"quartz_cron_expression": "0 0 * * * ?"}, "email_notifications": {"on_failure": ["a@b.c"]},
+             "tasks": [{"task_key": "t", "new_cluster": {"spark_version": "14.3.x-scala2.12"}}]}
+        b = baseline_settings(s, 7)
+        self.assertNotIn("schedule", b); self.assertNotIn("email_notifications", b)
+        self.assertIn("new_cluster", b["tasks"][0])                        # still classic: that is the point of the baseline
+        self.assertEqual(b["tags"]["smct_baseline"], "true")
+
+
+class LiteralSecrets(unittest.TestCase):
+    def test_detects_without_returning_values(self):
+        from smc.secrets_scan import find_literal_secrets
+        s = {"tasks": [{"new_cluster": {"spark_env_vars": {"DB_PASSWORD": "hunter2hunter2", "MODE": "prod"}}}],
+             "parameters": [{"name": "api_token", "default": "abcdef123456"}], "git_source": {"git_url": "https://github.com/a/b"}}
+        hits = find_literal_secrets(s)
+        self.assertTrue(any("DB_PASSWORD" in h for h in hits)); self.assertTrue(any("api_token" in h for h in hits))
+        self.assertFalse(any("hunter2" in h or "abcdef" in h for h in hits)); self.assertFalse(any("MODE" in h or "git_url" in h for h in hits))
+    def test_secret_references_are_fine(self):
+        from smc.secrets_scan import find_literal_secrets
+        self.assertEqual(find_literal_secrets({"spark_env_vars": {"DB_PASSWORD": "{{secrets/scope/db}}"}}), [])
+    def test_known_token_shapes(self):
+        from smc.secrets_scan import find_literal_secrets
+        self.assertTrue(find_literal_secrets({"x": "dapi" + "0" * 32}))
+    def _fixture(self):
+        d, _, _ = load_fleet()
+        job = d["jobs"][0]
+        return FakeWorkspace([job], d["notebooks"]), FakeStore(), Config(catalog="c")
+    def test_clone_refused_when_secret_present(self):
+        ws, store, cfg = self._fixture()
+        ws.jobs[1]["settings"]["tasks"][0]["notebook_task"]["base_parameters"] = {"db_password": "hunter2hunter2"}
+        store.add_event("job:1", "APPROVED"); pipeline.migrate(ws, store, cfg)
+        e = store.latest_events()["job:1"]
+        self.assertEqual(e["event"], "MIGRATE_FAILED"); self.assertIn("LITERAL_SECRET", e["detail"]["reason"])
+        self.assertNotIn("hunter2", json.dumps(e["detail"]))                         # the value itself is never logged
+        self.assertEqual(ws.files, {}); self.assertEqual(len(ws.jobs), 1)            # no backup written, no clone created
+    def test_promotion_blocked_when_secret_appears_later(self):
+        ws, store, cfg = self._fixture()
+        store.add_event("job:1", "APPROVED"); pipeline.migrate(ws, store, cfg)
+        store.add_event("job:1", "VALIDATED", detail={"verdict": "PASS"}); store.add_event("job:1", "PROMOTE_APPROVED")
+        ws.jobs[1]["settings"]["tasks"][0]["notebook_task"]["base_parameters"] = {"db_password": "hunter2hunter2"}
+        pipeline.promote(ws, store, cfg)
+        e = store.latest_events()["job:1"]
+        self.assertEqual(e["event"], "VALIDATION_FAILED"); self.assertIn("LITERAL_SECRET", e["detail"]["reason"])
+        self.assertFalse([k for k in ws.files if "promote_" in k])                   # no promotion backup containing the secret

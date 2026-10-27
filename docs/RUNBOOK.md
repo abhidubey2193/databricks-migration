@@ -11,4 +11,6 @@
 | Bundle-managed job | After promotion commit `generated_bundles/<job_id>.yml` to the repo; otherwise the next `bundle deploy` restores classic. |
 | Something is wrong after promotion | App -> Request rollback -> `smct_rollback`. The pre-promotion definition is restored byte-for-byte from `backup_dir`. Rewritten notebook copies stay in `migrated_dir`; originals were never changed. |
 | Clone fires twice | Should be impossible; run `smct_guard` (check `guard_log`) and file a bug. |
+| Migrate failed with `LITERAL_SECRET` | The job definition holds a password or token in plain text. Move it into a Databricks secret and reference it as `{{secrets/scope/key}}`, then approve again. |
+| A `[classic-baseline]` job is left over | Validation deletes it when it finishes, even on failure. If the process was killed mid-run, delete it by hand (it carries the tag `smct_baseline`). |
 | Cleaning up | Clones are tagged `smct_clone=true` and named `... [serverless]`; delete after promotion if desired. Shadow schemas are `smct_val_<job_id>_*`. |

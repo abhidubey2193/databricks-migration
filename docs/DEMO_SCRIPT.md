@@ -1,20 +1,30 @@
-# 5-minute demo script (record this; every line maps to a scoring criterion)
+# Demo script (about 5 minutes)
 
-Prep once: `databricks bundle deploy -t dev -var=warehouse_id=...`, `python demo/seed_demo_workspace.py --folder /Workspace/Users/<you>/smct_demo`, `bundle run smct_discover`. Open the app in one tab, the Jobs UI in another, terminal ready.
+Read this as notes, not a script to recite. If you have never run it on a real workspace, do that first (see `VERIFICATION.md`), and only show steps that actually worked for you. Say plainly what you didn't run.
 
-| Time | Show | Say |
+Before recording:
+
+- `databricks bundle deploy -t dev -var="warehouse_id=<id>" -var="catalog=<catalog>"`
+- `python demo/seed_demo_workspace.py --folder /Workspace/Users/<you>/smct_demo`
+- `databricks bundle run smct_discover -t dev`
+- Put the app in one tab, the Jobs UI in another, a terminal ready. Hide workspace URLs and other people's emails.
+
+| Time | On screen | What to say |
 |---|---|---|
-| 0:00 | Terminal: `make scan-demo` | "22 classic jobs, one command, no workspace. 7 auto-fixable, 8 need manual work, 2 must stay classic - and 25-task job is *ready*, no 10-task cap." (L1, L2) |
-| 0:30 | App **Overview** | "Same inventory on the real workspace: KPIs, verdict mix, burn-down, spend-ranked wave plan." (L1, 30 pts) |
-| 1:00 | **Fleet** -> `cache_heavy` -> findings + *code patch* diff | "`.cache()`, `checkpoint()` and a mount call found at line level; patch shows exactly what SMCT will change. Originals untouched." (L6, L13) |
-| 1:30 | Fleet -> `init_native` and `egg_lib` | "Init script parsed: pip lines translate, `apt-get` is a blocker. Egg is a blocker with the wheel remediation. Nothing is silently ignored." (L3, L5, L11) |
-| 2:00 | **Approvals** Gate 1: approve `smct-demo-ab-pass` and `smct-demo-ab-overflow` | "Human gate, audit event, state machine." |
-| 2:15 | Terminal: `bundle run smct_migrate_validate -t dev -var=target_param=target_schema` (speed up the video) | "Clone is created *with no schedule*; classic and serverless both run into shadow schemas." (L10, L8) |
-| 3:00 | **Validation** tab | "ab-pass: PASS, schema/rows/EXCEPT ALL clean, runtime comparison. ab-overflow: serverless raises on int overflow - FAIL, promotion is blocked." (L8, 20 pts) |
-| 3:30 | Gate 2 -> `bundle run smct_promote`; Jobs UI: same job id/name/schedule, now serverless; show `generated_bundles/<id>.yml` | "Original job keeps identity; Git-ready YAML emitted; settings-hash check prevents drift." (L9) |
-| 4:00 | App -> Request rollback -> `smct_rollback`; Jobs UI shows classic again | "Exact classic definition restored from backup." |
-| 4:20 | Create a duplicate scheduled clone by hand; `bundle run smct_guard`; **Schedule guard** tab | "Guard pauses it and logs why." (L10) |
-| 4:40 | **Cost** tab | "DBUs and list-price $ before/after per run, by team tag, from system tables." (L12) |
-| 4:55 | Terminal: `make test` | "74 offline tests incl. full lifecycle on a fake workspace." |
+| 0:00 | Terminal: `make scan-demo` | 22 sample jobs, scanned from a file with no workspace. 2 are ready, 7 can be fixed automatically, 1 can be migrated in part, 8 need manual work, 2 should stay classic, and 2 are already serverless. The 25-task job is ready, so there is no 10-task cap here. |
+| 0:35 | App, Overview | The same view on the real workspace: counts per verdict, the burn-down, and the wave plan sorted by classic spend. This is the fleet tracking part. |
+| 1:05 | Fleet, `cache_heavy`, then its code patch | The scan finds `.cache()`, `checkpoint()` and a mount call by line. The patch shows exactly what will change. The original notebook is untouched. |
+| 1:35 | Fleet, `init_native` and `egg_lib` | The init script is read: pip lines turn into dependencies, `apt-get` is a blocker. An egg library is a blocker, with the wheel route as the fix. Nothing is skipped quietly. |
+| 2:05 | Approvals, first gate: approve `smct-demo-ab-pass` and `smct-demo-ab-overflow` | A person decides what moves. Each approval is a row in the audit log. |
+| 2:20 | Terminal: `databricks bundle run smct_migrate_validate -t dev -var="target_param=target_schema"` (cut the waiting) | The clone is created with no schedule. Validation runs a throwaway classic copy and the serverless clone into separate schemas. Your production job is not run. |
+| 3:00 | Validation tab | `ab-pass` matches on schema, row counts and `EXCEPT ALL`. `ab-overflow` fails because the serverless run raises on integer overflow, so promotion is blocked. |
+| 3:30 | Second gate, then `smct_promote`. Jobs UI: same job id, name and schedule, now serverless. Show `generated_bundles/<id>.yml` | The job keeps its identity. The YAML is ready to commit. If someone edits the job between clone and promotion, promotion stops. |
+| 4:00 | App, request rollback, `smct_rollback`, Jobs UI shows classic again | The old definition comes back from the backup. |
+| 4:20 | Make a duplicate scheduled clone by hand, `smct_guard`, Schedule guard tab | The guard pauses the duplicate and logs why. |
+| 4:40 | Cost tab | DBUs and list-price dollars before and after, per run, by team tag, from the system tables. Classic figures leave out cloud VM cost. |
+| 4:55 | Terminal: `make test` | 86 offline tests, including a full lifecycle against a fake workspace. |
 
-Tips: pre-run the slow job and cut; keep the video <= 5:00; do not show workspace URLs or emails of colleagues.
+Notes:
+
+- Keep it under 5:00. Pre-run the slow steps and cut the waiting.
+- If a step failed on your workspace, leave it out and say so in the README instead.

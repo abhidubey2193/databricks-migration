@@ -1,80 +1,99 @@
-# Serverless Migration Control Tower (SMCT)
+# Serverless Migration Control Tower
 
-**Move a whole Databricks workspace from classic to serverless - tracked, fixed, proven equal, and reversible.**
+A tool for moving a whole Databricks workspace from classic compute to serverless, and keeping track of how far along you are.
 
-SMCT is a Databricks Asset Bundle that runs *on serverless itself*. It answers the four questions a migration lead actually has:
+The /compute migration agent handles one notebook or job at a time. It doesn't tell you how many jobs you have, which ones are ready, what a migrated job costs compared to before, or whether the migrated job still produces the same data. This project covers those gaps. It is deployed as an Asset Bundle and runs on serverless itself.
 
-1. **Where are we?** Every job and cluster, scored 0-100, in waves, with a live burn-down. (L1)
-2. **What blocks us, and can it be fixed automatically?** 41 rules across L2-L13; auto-fixes for caching, checkpoints, global temp views, mounts, streaming triggers, ANSI casts, libraries, init-script pip installs. (L2-L7, L11, L13)
-3. **Is the serverless version actually the same?** Classic-vs-serverless A/B on the real outputs, with promotion *impossible* until it passes. (L8)
-4. **Can we undo it, and did it save money?** Exact-definition rollback, Git-ready YAML, duplicate-schedule guard, DBU/$ before vs after. (L9, L10, L12)
+## Status, up front
+
+- The logic is covered by 86 offline tests, which also pass when run inside a Databricks workspace (serverless notebook compute).
+- Discovery has run against a real workspace and wrote its tables to Unity Catalog. That workspace was Databricks Free Edition, which has no classic compute, so there was nothing classic to migrate.
+- Clone, A/B validation, promotion, rollback, the schedule guard, the app and the bundle deploy have **not** been run on real classic jobs yet. `docs/VERIFICATION.md` lists what was checked and what wasn't, and has a checklist for the rest.
+
+## What it does
+
+1. **Finds everything.** It lists every job and all-purpose cluster, scans their settings and notebook code, and gives each one a readiness score from 0 to 100, a list of blockers and a wave (0 = ready now, 1 = automatic fixes then migrate, 2 = needs manual work, 3 = keep on classic). Inside a wave, jobs with the highest classic spend come first.
+2. **Fixes what it safely can.** Cache and checkpoint calls, global temp views, mount calls and `/mnt` paths, streaming triggers, `CAST` under ANSI mode, library mapping, and `pip install` lines in init scripts are rewritten automatically. Everything else is reported with a reason and a suggested fix. Original notebooks are never edited; rewritten copies go to a separate folder.
+3. **Checks the result.** An A/B run compares the classic output with the serverless output table by table. A job cannot be promoted unless that check passed and a person approved it.
+4. **Can be undone.** Promotion keeps the original job id, name, schedule and notifications, and saves the old definition first. Rollback puts it back exactly.
 
 ```
- discover ──► [Gate 1: human approves]  ──► migrate ──► validate (A/B) ──► [Gate 2: human approves] ──► promote ──► (rollback)
- scan+score    app / audit event            rewrite code,    classic run vs        app / audit event       backup + reset original    restore exact
- plan waves                                 clone w/o         serverless run,                               + bundle YAML + diff       classic JSON
-                                            schedule          table-level diff
-                                   guard (every 30 min): no clone may ever fire alongside its original
+discover -> approve -> migrate -> validate (A/B) -> approve -> promote -> rollback if needed
+ scan, score   person    clone with     classic copy vs       person    original job id
+ plan waves              no schedule    serverless clone                 gets the new setup
 ```
 
-## Why this is safe by construction
-| Risk | Design answer |
-|---|---|
-| Double execution | Clone is created **without any trigger**; guard job pauses violators; promotion keeps the *original* job id, schedule, ownership, notifications. |
-| Silent wrong results | A/B diff on schema, counts, `EXCEPT ALL`, aggregate drift. `ERROR` is never `PASS`. No `VALIDATED` event => `promote` refuses. |
-| Touching originals | Notebook rewrites go to **copies** (`migrated_dir`); original notebooks are never modified. Original job JSON is backed up before promotion. |
-| Concurrent edits | Settings hash taken at clone time; promotion aborts on drift. |
-| Unreviewed change | Two human gates, every action an append-only `migration_events` row (who, when, detail). |
-| Cost surprises | Cost views compare **per run** before/after; caveat on VM cost shown in UI. |
+A guard job runs on a timer and pauses any clone that has a schedule while its original is still active.
 
-## Quick start (10 minutes)
-Prerequisites: Unity Catalog, a SQL warehouse, Databricks CLI >= 0.250 authenticated, serverless jobs enabled, a **workspace admin** (or service principal with admin) so the scan can see all jobs, and `SELECT` on `system.billing` + `system.lakeflow` for cost.
+## How it handles the risky parts
+
+- **Double runs.** A clone is created with no schedule or trigger at all. The guard pauses any that appear later.
+- **Validation side effects.** The A/B test does not run your production job. It runs a temporary copy of it (no schedule, no notifications) on the original classic compute, then deletes the copy.
+- **Wrong results.** Schema, row counts, `EXCEPT ALL` in both directions and aggregate drift are compared. An error in the comparison is reported as an error, never as a pass.
+- **Edits in the meantime.** A hash of the job is taken when it is cloned. If someone changes the job before promotion, promotion stops.
+- **Secrets.** If a job definition contains a password or token in plain text, the tool will not clone or promote it, because the rollback backup stores the whole definition. Move the value into a Databricks secret first. The report shows where the value is, never the value.
+
+## Setup
+
+You need Unity Catalog, a SQL warehouse, the Databricks CLI (0.250 or newer), serverless jobs enabled, and an admin (or service principal) so the scan can see all jobs. Cost views also need `SELECT` on `system.billing` and `system.lakeflow`.
 
 ```bash
-git clone <this repo> && cd serverless-migration-control-tower
-python -m unittest discover -s tests -t .                 # 74 offline tests, no workspace needed
-make scan-demo                                            # offline fleet report on 22 synthetic jobs
+python -m unittest discover -s tests -t .      # offline tests, no workspace needed
+make scan-demo                                  # scan 22 made-up jobs locally
 
 databricks bundle validate -t dev
-databricks bundle deploy   -t dev -var="warehouse_id=<warehouse-id>" -var="catalog=<your_catalog>"
-databricks bundle run smct_discover -t dev                # inventory + scoring
-databricks bundle run smct_app -t dev                     # opens the control-tower app
+databricks bundle deploy -t dev -var="warehouse_id=<warehouse-id>" -var="catalog=<catalog>"
+databricks bundle run smct_discover -t dev
+databricks bundle run smct_app -t dev
 ```
-Optional demo data (creates *paused* classic jobs, nothing runs): `python demo/seed_demo_workspace.py --folder /Workspace/Users/<you>/smct_demo`
 
-### Operating loop
-1. App -> **Approvals -> Gate 1**: tick workloads (READY / AUTO_FIXABLE / PARTIAL) -> *Approve*.
-2. `databricks bundle run smct_migrate_validate -t dev` (add `-var="target_param=target_schema"` for sandbox A/B; see below).
-3. App -> **Validation** tab: inspect per-table result and runtime comparison. App -> **Gate 2** -> *Approve promotion*.
-4. `databricks bundle run smct_promote -t dev`. Commit `generated_bundles/<job>.yml` to Git if the job is bundle-managed.
-5. Wrong? App -> *Request rollback* -> `databricks bundle run smct_rollback -t dev` restores the exact classic definition.
-6. `smct_guard` (every 30 min, enable via `guard_schedule_status=UNPAUSED`) keeps schedules single-fire. `smct_cost` refreshes cost views.
+The catalog name differs between workspaces (`main` on most, `workspace` on Free Edition). The job entrypoint falls back to the session's current catalog if the one you pass doesn't exist, but the bundle's schema resource still needs the right name, so pass `catalog=`. Set `SMC_CATALOG` in `app.yaml` to match.
 
-### A/B validation modes
-* **sandbox (recommended)** - your job exposes a parameter such as `target_schema`; set `-var="target_param=target_schema"`. SMCT runs classic and serverless into separate shadow schemas (`smct_val_<id>_classic|serverless`) and diffs every table. Zero production writes.
-* **restore (opt-in)** - for jobs with no such parameter: tag the job `smct_output_tables=cat.schema.t1,cat.schema.t2` (or let SMCT detect writes), pass `-var="allow_restore=true"`. SMCT records Delta versions, runs classic, clones outputs, `RESTORE`s, runs serverless, diffs. Use in a quiet window - production tables are briefly rewound.
+To try it on made-up data, `python demo/seed_demo_workspace.py --folder /Workspace/Users/<you>/smct_demo` creates paused classic jobs. It needs a workspace that has classic compute. Nothing is run.
 
-### Configuration (bundle variables)
-`mount_map` (`{"/mnt/raw":"/Volumes/c/s/raw"}`), `ansi` (`try`|`disable`), `performance_target`, `batch_size`/`batch_upto` (staged migration of huge DAGs), `backup_dir`, `migrated_dir`, `bundle_out_dir`, `team_tag`. Approvers: `SMC_APPROVERS` in `app.yaml`.
+### Day to day
 
-## Offline CLI (no workspace)
+1. In the app, open Approvals and approve the workloads you want to move.
+2. `databricks bundle run smct_migrate_validate -t dev` clones them and runs the A/B check.
+3. Check the Validation tab, then approve promotion.
+4. `databricks bundle run smct_promote -t dev`. If the job is managed by a bundle, commit the generated `generated_bundles/<job>.yml` to Git, otherwise the next bundle deploy brings the classic version back.
+5. If something is wrong, request a rollback in the app and run `smct_rollback`.
+6. `smct_guard` keeps schedules single-fire (turn it on with `guard_schedule_status=UNPAUSED`). `smct_cost` refreshes the cost views.
+
+### Two ways to run the A/B check
+
+- **Sandbox (recommended).** The job takes a parameter such as `target_schema`. Set `-var="target_param=target_schema"` and both runs write to separate shadow schemas, so production tables are not touched.
+- **Restore (opt-in).** For jobs without such a parameter. Tag the job `smct_output_tables=cat.schema.t1,...` and pass `-var="allow_restore=true"`. The tool records Delta versions, runs the classic copy, saves its outputs, restores the tables, runs the serverless clone and compares. Production tables are briefly rewound, so do this in a quiet window.
+
+### Options
+
+Bundle variables: `mount_map` (for example `{"/mnt/raw":"/Volumes/c/s/raw"}`), `ansi` (`try` or `disable`), `performance_target`, `batch_size` and `batch_upto` (migrate a large job in dependency-ordered batches), `backup_dir`, `migrated_dir`, `bundle_out_dir`, `team_tag`. Approvers are set with `SMC_APPROVERS` in `app.yaml`.
+
+## Command line, no workspace needed
+
 ```bash
-PYTHONPATH=src python -m smc.cli scan      --fixtures tests/fixtures/fleet.json --detail 11
-PYTHONPATH=src python -m smc.cli rewrite   --file my_notebook.py --mount-map '{"/mnt/raw":"/Volumes/c/s/raw"}'   # prints a diff
-PYTHONPATH=src python -m smc.cli transform --fixtures tests/fixtures/fleet.json --job 12 --batch-size 10        # 25-task DAG -> bundle YAML
-PYTHONPATH=src python -m smc.cli guard     --fixtures tests/fixtures/fleet.json
-PYTHONPATH=src python -m smc.cli coverage                                                                     # every rule + fix/detect
+PYTHONPATH=src python -m smc.cli scan --fixtures tests/fixtures/fleet.json --detail 11
+PYTHONPATH=src python -m smc.cli rewrite --file my_notebook.py --mount-map '{"/mnt/raw":"/Volumes/c/s/raw"}'
+PYTHONPATH=src python -m smc.cli transform --fixtures tests/fixtures/fleet.json --job 12 --batch-size 10
+PYTHONPATH=src python -m smc.cli guard --fixtures tests/fixtures/fleet.json
+PYTHONPATH=src python -m smc.cli coverage
 ```
 
-## Repository map
+`coverage` prints every rule and whether it is an automatic fix or detection only.
+
+## Layout
+
 ```
-databricks.yml, resources/jobs.yml   bundle: 6 serverless jobs, UC schema + grants, Databricks App
-app/app.py, app.yaml                 Streamlit app: overview, fleet, approvals (2 gates), validation, cost, guard
-src/smc/                             stdlib-only core:  code_scan  config_scan  initscripts  scoring  transform
-                                     ab_diff  drift  guard  state  sql | SDK/Spark edges: db  store  pipeline
-src/jobs/entry.py                    single job entrypoint (--stage ...)
-tests/                               74 tests: scanners, rewriters, transformer, scoring policy, A/B diff, lifecycle (fake workspace)
-demo/                                fixture generator, workspace seeder, demo script
-docs/                                ARCHITECTURE, LIMITATIONS (L1-L13 matrix + known gaps), RUNBOOK, VERIFICATION, DEMO_SCRIPT, SUBMISSION_EMAIL
+databricks.yml, resources/jobs.yml   the bundle: six serverless jobs, a schema with grants, the app
+app/app.py, app.yaml                 Streamlit app (overview, fleet, approvals, validation, cost, guard)
+src/smc/                             scanners, rewriters, transformer, scoring, A/B diff, drift, guard, state machine
+                                     db.py, store.py, pipeline.py are the only parts that touch Databricks
+src/jobs/entry.py                    one entrypoint shared by all jobs (--stage discover, migrate, ...)
+tests/                               offline tests, using fake workspace, store and SQL engine
+demo/                                fixture generator, workspace seeder
+docs/                                architecture, limitation coverage, runbook, verification log, demo script
 ```
-No client data, tokens or credentials anywhere; fixtures are synthetic.
+
+Every limitation from the brief (L1 to L13) and where it is handled is in `docs/LIMITATIONS.md`, along with the known gaps.
+
+No customer data, tokens or credentials are in this repository. The fixtures are made up.

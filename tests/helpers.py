@@ -49,6 +49,7 @@ class FakeWorkspace:
     def read_text(self, path): return self.files[path]
     def create_job(self, s):
         self.next_id += 1; self.jobs[self.next_id] = {"job_id": self.next_id, "settings": json.loads(json.dumps(s))}; return self.next_id
+    def delete_job(self, i): self.jobs.pop(i, None)
     def reset_job(self, i, s): self.jobs[i]["settings"] = json.loads(json.dumps(s))
     def update_job(self, i, partial):
         for k, v in partial.items(): self.jobs[i]["settings"][k] = v

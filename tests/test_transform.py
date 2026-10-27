@@ -16,7 +16,8 @@ class Transform(unittest.TestCase):
     def test_no_task_cap(self):
         r = to_serverless(mkjob(40), origin_job_id=1)
         self.assertEqual(len(r.migrated_tasks), 40)
-        self.assertTrue(all("job_cluster_key" not in t and t["environment_key"] for t in r.settings["tasks"]))
+        self.assertTrue(all("job_cluster_key" not in t and "new_cluster" not in t for t in r.settings["tasks"]))
+        self.assertTrue(all("environment_key" not in t for t in r.settings["tasks"]))       # notebook tasks without dependencies need none
         self.assertNotIn("job_clusters", r.settings)
     def test_clone_has_no_triggers_and_is_tagged(self):
         s = to_serverless(mkjob(), origin_job_id=7).settings
@@ -28,7 +29,7 @@ class Transform(unittest.TestCase):
         s = to_serverless(mkjob(3, libs=[{"pypi": {"package": "a==1"}}, {"whl": "/Volumes/c/s/v/x.whl"}]), origin_job_id=1).settings
         self.assertEqual(len(s["environments"]), 1)
         self.assertEqual(s["environments"][0]["spec"]["dependencies"], ["a==1", "/Volumes/c/s/v/x.whl"])
-        self.assertEqual(s["environments"][0]["spec"]["client"], ENV_CLIENT_VERSION)
+        self.assertEqual(s["environments"][0]["spec"]["environment_version"], ENV_CLIENT_VERSION)
     def test_blocker_library_keeps_task_on_classic(self):
         r = to_serverless(mkjob(2, libs=[{"egg": "x.egg"}]), origin_job_id=1)
         self.assertEqual(r.migrated_tasks, []); self.assertEqual(len(r.left_on_classic), 2); self.assertIn("job_clusters", r.settings)
@@ -58,7 +59,7 @@ class Transform(unittest.TestCase):
         p = promote_settings(o, clone)
         self.assertEqual(p["name"], "j"); self.assertEqual(p["schedule"], o["schedule"]); self.assertEqual(p["email_notifications"], o["email_notifications"])
         self.assertNotIn("smct_clone", p["tags"]); self.assertEqual(p["tags"]["owner"], "me"); self.assertEqual(p["tags"]["smct_migrated"], "true")
-        self.assertTrue(all("environment_key" in t for t in p["tasks"]))
+        self.assertTrue(all("job_cluster_key" not in t and "new_cluster" not in t for t in p["tasks"]))
 
     def test_promote_preserves_bundle_deployment_metadata(self):
         o = mkjob(1); o["deployment"] = {"kind": "BUNDLE", "metadata_file_path": "/x"}; o["description"] = "keep me"
@@ -96,3 +97,39 @@ class State(unittest.TestCase):
         self.assertTrue(can_transition("DISCOVERED", "APPROVED")); self.assertFalse(can_transition("CLONED", "PROMOTED"))
         self.assertFalse(can_transition("VALIDATION_FAILED", "PROMOTE_APPROVED")); self.assertTrue(can_transition("VALIDATED", "PROMOTE_APPROVED"))
         with self.assertRaises(ValueError): require("DISCOVERED", "PROMOTED")
+
+
+class EnvironmentKeyRules(unittest.TestCase):
+    """Per the Databricks bundle examples: python/wheel/dbt tasks require environment_key on serverless; notebook tasks need it only for dependencies."""
+    def _job(self, task, libs=None):
+        t = {"task_key": "t", "new_cluster": {"spark_version": "14.3.x-scala2.12"}, **task}
+        if libs: t["libraries"] = libs
+        return {"name": "j", "tasks": [t]}
+    def test_python_task_always_gets_environment_key(self):
+        s = to_serverless(self._job({"spark_python_task": {"python_file": "/f.py"}}), origin_job_id=1).settings
+        self.assertEqual(s["tasks"][0]["environment_key"], "smct_env")
+        self.assertEqual(s["environments"][0]["spec"], {"environment_version": ENV_CLIENT_VERSION})
+    def test_notebook_with_dependencies_gets_key(self):
+        s = to_serverless(self._job({"notebook_task": {"notebook_path": "/n"}}, [{"pypi": {"package": "requests"}}]), origin_job_id=1).settings
+        self.assertEqual(s["tasks"][0]["environment_key"], "smct_env"); self.assertEqual(s["environments"][0]["spec"]["dependencies"], ["requests"])
+    def test_notebook_without_dependencies_gets_none(self):
+        s = to_serverless(self._job({"notebook_task": {"notebook_path": "/n"}}), origin_job_id=1).settings
+        self.assertNotIn("environment_key", s["tasks"][0])
+    def test_fallback_retries_without_environment_key_on_notebook_tasks(self):
+        from smc import pipeline
+        s = to_serverless(self._job({"notebook_task": {"notebook_path": "/n"}}, [{"pypi": {"package": "requests"}}]), origin_job_id=1).settings
+        calls = []
+        class WS:
+            def create_job(self, settings):
+                calls.append(settings)
+                if any("environment_key" in t for t in settings["tasks"]):
+                    raise RuntimeError("Invalid request: environment_key is not supported for notebook tasks")
+                return 55
+        notes = []
+        self.assertEqual(pipeline.create_with_fallback(WS(), s, notes), 55)
+        self.assertEqual(len(calls), 2); self.assertNotIn("environments", calls[1]); self.assertIn("%pip install", notes[0])
+    def test_other_errors_are_not_swallowed(self):
+        from smc import pipeline
+        class WS:
+            def create_job(self, settings): raise RuntimeError("quota exceeded")
+        with self.assertRaises(RuntimeError): pipeline.create_with_fallback(WS(), {"tasks": []}, [])

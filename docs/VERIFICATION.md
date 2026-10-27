@@ -6,7 +6,7 @@ Free Edition has **serverless compute only** (no classic clusters, no classic jo
 
 | Check | Result |
 |---|---|
-| Full unit suite (`unittest discover`) run from the workspace Git folder on serverless | **PASS** - 71 tests (74 after the catalog fix below) |
+| Full unit suite (`unittest discover`) run from the workspace Git folder on serverless | **PASS** - 71 tests at the time (the suite is 86 now, after the catalog fix and the changes below; not re-run in the workspace since) |
 | Offline fleet scan CLI on the synthetic fleet inside the workspace | **PASS** - same ranking/verdicts as the dev machine |
 | `pipeline.discover` against the real Jobs/Clusters API through `db.Workspace` (SDK auth from the notebook) | **PASS** after fix - listed 6 jobs, wrote `workloads`, `findings`, `scan_history` and the status/cost views to `workspace.smct` |
 | Classification of the 6 real jobs | All `ALREADY_SERVERLESS` (they were serverless already) |
@@ -21,7 +21,7 @@ Defects found by the live run (both fixed):
 ## Full checklist (run on a workspace that has classic jobs)
 
 
-The offline suite proves the logic; this checklist proves the SDK edges in *your* workspace. Record cloud, region, date, DBR/serverless environment version.
+The offline suite covers the logic; this checklist covers the SDK calls in your workspace. Write down the cloud, region, date and serverless environment version.
 
 | # | Step | Expected | Result |
 |---|---|---|---|
@@ -34,4 +34,6 @@ The offline suite proves the logic; this checklist proves the SDK edges in *your
 | 7 | Request rollback + `smct_rollback` | original classic definition restored | |
 | 8 | Create a duplicate-schedule clone by hand, run `smct_guard` | clone paused, `guard_log` row | |
 | 9 | `smct_cost` after some runs | `cost_before_after` returns rows | |
-| 10 | Confirm `environment_key` accepted for notebook tasks on your release (else adjust `ENV_TASK_TYPES`) | | |
+| 10 | Clone a notebook job that has pip dependencies. Check whether the API accepts `environment_key` on the notebook task, or whether `create_with_fallback` kicks in (the clone's notes will say so) | | |
+| 11 | Run validation on a job and check that the `[classic-baseline]` copy is gone afterwards and the production job shows no new run | | |
+| 12 | Put a fake token in a test job's parameters, approve it, run migrate | MIGRATE_FAILED with `LITERAL_SECRET`, no clone, no backup file | |

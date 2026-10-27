@@ -10,6 +10,7 @@ from .initscripts import parse_init_script
 from .models import Finding, WorkloadReport
 from .rules import MIN_SERVERLESS_DBR
 from .scoring import score_report
+from .secrets_scan import find_literal_secrets
 
 InitFetch = Callable[[str], Optional[str]]
 NotebookFetch = Callable[[str], Optional[Tuple[str, str]]]   # path -> (source_text, language)
@@ -184,6 +185,8 @@ def scan_job(job: Dict[str, Any], clusters_by_id: Optional[Dict[str, Dict[str, A
         findings.append(mk("L2.LARGE_JOB", "", f"{classic_tasks} migratable tasks"))
     if (s.get("deployment") or {}).get("kind") == "BUNDLE":
         findings.append(mk("L9.BUNDLE_MANAGED", "", (s.get("deployment") or {}).get("metadata_file_path", "")))
+    for leak in find_literal_secrets(s)[:10]:
+        findings.append(mk("L9.LITERAL_SECRET", leak, ""))
     if s.get("git_source"):
         findings.append(mk("L9.GIT_SOURCE", "", s["git_source"].get("git_url", "")))
     # dedupe

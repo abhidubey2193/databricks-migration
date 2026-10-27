@@ -14,8 +14,9 @@ from .config_scan import scan_job, scan_standalone_cluster
 from .db import Workspace
 from .models import WorkloadReport
 from .scoring import plan_waves, summarize
+from .secrets_scan import find_literal_secrets
 from .store import Store, now
-from .transform import (CLONE_SUFFIX, TAG_CLONE, TAG_MIGRATED, batch_plan, canonical_hash, promote_settings,
+from .transform import (BASELINE_TAG, baseline_settings, CLONE_SUFFIX, TAG_CLONE, TAG_MIGRATED, batch_plan, canonical_hash, promote_settings,
                         to_serverless)
 
 
@@ -42,7 +43,7 @@ def discover(ws: Workspace, store: Store, cfg: Config) -> Dict[str, int]:
     reports: List[WorkloadReport] = []
     for j in ws.list_jobs():
         tags = (j.get("settings", {}).get("tags") or {})
-        if tags.get(TAG_CLONE) == "true":
+        if tags.get(TAG_CLONE) == "true" or tags.get(BASELINE_TAG) == "true":
             continue                                   # SMCT's own clones are not fleet members
         reports.append(scan_job(j, clusters, init, nb, cfg.mount_map))
     for c in clusters.values():
@@ -116,6 +117,12 @@ def _migrate_one(ws: Workspace, store: Store, cfg: Config, wid: str, clusters: D
                                     "patch": drift.code_patch(p, text, new)})
     store.append("code_patches", patches)
     # batched (staged) migration for very large jobs
+    leaks = find_literal_secrets(settings)
+    if leaks:                                    # the pre-change backup stores the whole definition: never write a secret into it
+        store.add_event(wid, "MIGRATE_FAILED", detail={"reason": "LITERAL_SECRET: credential-like values at " + ", ".join(leaks[:5])
+                        + "; move them to Databricks secrets, then re-approve"})
+        print(f"[smct] {wid}: not cloned, literal secrets found at {leaks[:5]}")
+        return
     task_keys = None
     if cfg.batch_size:
         batches = batch_plan(settings, cfg.batch_size)
@@ -127,7 +134,7 @@ def _migrate_one(ws: Workspace, store: Store, cfg: Config, wid: str, clusters: D
     if not res.migrated_tasks:
         store.add_event(wid, "MIGRATE_FAILED", detail={"reason": "no task could be moved", "left_on_classic": res.left_on_classic})
         return
-    clone_id = ws.create_job(res.settings)
+    clone_id = create_with_fallback(ws, res.settings, res.notes)
     backup = f"{cfg.backup_dir}/{job_id}/{now().strftime('%Y%m%dT%H%M%S')}.json"
     ws.write_text(backup, json.dumps(settings, indent=2, sort_keys=True))
     store.add_event(wid, "CLONED", detail={
@@ -139,6 +146,46 @@ def _migrate_one(ws: Workspace, store: Store, cfg: Config, wid: str, clusters: D
 
 
 # ======================================================================= validate (L8)
+def create_with_fallback(ws, settings: Dict[str, Any], notes: List[str]) -> int:
+    """Create the clone. Some Jobs API releases refuse `environment_key` on notebook tasks: retry once without it
+    and say so, because those notebooks then have to install their own libraries (%pip install ...)."""
+    try:
+        return ws.create_job(settings)
+    except Exception as e:  # noqa: BLE001
+        if "environment_key" not in str(e):
+            raise
+        import copy
+        retry = copy.deepcopy(settings)
+        stripped = []
+        for t in retry.get("tasks", []):
+            if "notebook_task" in t and t.pop("environment_key", None):
+                stripped.append(t["task_key"])
+        if not stripped:
+            raise
+        retry["environments"] = [en for en in retry.get("environments", []) if any(t.get("environment_key") == en["environment_key"]
+                                                                                  for t in retry["tasks"])]
+        if not retry["environments"]:
+            retry.pop("environments")
+        notes.append("notebook tasks " + ", ".join(stripped) + ": this workspace's Jobs API refused environment_key on notebook tasks; "
+                     "add `%pip install <deps>` at the top of those notebooks")
+        return ws.create_job(retry)
+
+
+def _run_classic_baseline(ws, job_id: int, orig: Dict[str, Any], params: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """Run a silent, unscheduled COPY of the original job on its classic compute, then delete the copy.
+
+    The production job itself is never run by validation, so its alerts, notifications and run history stay untouched.
+    """
+    bid = ws.create_job(baseline_settings(orig, job_id))
+    try:
+        return ws.run_and_wait(bid, params)
+    finally:
+        try:
+            ws.delete_job(bid)
+        except Exception as e:  # noqa: BLE001
+            print(f"[smct] could not delete classic baseline job {bid}: {e} (tag {BASELINE_TAG}=true, safe to delete)")
+
+
 def validate(ws: Workspace, store: Store, cfg: Config, spark, ids: Optional[List[str]] = None) -> None:
     ids = ids or store.ids_in_status("CLONED")
     sql = lambda q: [r.asDict() for r in spark.sql(q).collect()]  # noqa: E731
@@ -180,7 +227,7 @@ def _validate_one(ws, store, cfg, spark, sql, wid) -> None:
         for sc in (sc_a, sc_b):
             spark.sql(f"DROP SCHEMA IF EXISTS {sc} CASCADE")
             spark.sql(f"CREATE SCHEMA {sc}")
-        ra = ws.run_and_wait(job_id, {cfg.target_param: sc_a})
+        ra = _run_classic_baseline(ws, job_id, orig, {cfg.target_param: sc_a})
         rb = ws.run_and_wait(clone_id, {cfg.target_param: sc_b})
         ca, sa = ra["run_id"], rb["run_id"]
         perf = ab_diff.perf_summary(ra["seconds"], rb["seconds"])
@@ -200,7 +247,7 @@ def _validate_one(ws, store, cfg, spark, sql, wid) -> None:
         shadow = f"{cfg.catalog}.smct_val_{job_id}"
         spark.sql(f"CREATE SCHEMA IF NOT EXISTS {shadow}")
         v0 = {t: int(sql(f"DESCRIBE HISTORY {t} LIMIT 1")[0]["version"]) for t in outs}
-        ra = ws.run_and_wait(job_id)
+        ra = _run_classic_baseline(ws, job_id, orig)
         for t in outs:
             spark.sql(f"CREATE OR REPLACE TABLE {shadow}.{t.split('.')[-1]}_classic DEEP CLONE {t}")
             spark.sql(f"RESTORE TABLE {t} TO VERSION AS OF {v0[t]}")
@@ -232,6 +279,12 @@ def promote(ws: Workspace, store: Store, cfg: Config, ids: Optional[List[str]] =
             if store.last_event(wid, "VALIDATED") is None:
                 raise RuntimeError("refusing to promote: no passing A/B validation on record")
             cur = ws.get_job(job_id)["settings"]
+            leaks = find_literal_secrets(cur)
+            if leaks:
+                store.add_event(wid, "VALIDATION_FAILED", detail={"reason": "LITERAL_SECRET: the job definition contains credential-like values at "
+                                + ", ".join(leaks[:5]) + "; move them to Databricks secrets before promoting (the rollback backup stores the full definition)"})
+                print(f"[smct] {wid}: promotion blocked, literal secrets found at {leaks[:5]}")
+                continue
             if drift.detect_drift(cl["original_hash"], cur):
                 store.add_event(wid, "VALIDATION_FAILED", detail={"reason": "DRIFT: job was edited after the clone was made; re-clone and re-validate"})
                 continue

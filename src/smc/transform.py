@@ -16,8 +16,12 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 from .config_scan import COMPUTE_TASK_KEYS, EnvSpec, scan_cluster_spec, scan_libraries
 from .models import BLOCKER
 
-ENV_CLIENT_VERSION = "2"                      # serverless environment version; bump per release notes
-ENV_TASK_TYPES = ("notebook_task", "spark_python_task", "python_wheel_task", "dbt_task")
+ENV_CLIENT_VERSION = "2"                      # serverless environment version (`environment_version` in the spec); bump per release notes
+# Per the Databricks bundle examples, environment_key is REQUIRED for Python script / wheel / dbt tasks on serverless.
+# Notebook tasks need none unless they carry dependencies, and some API releases reject the key on them, so notebook
+# tasks only get one when there is something to install (pipeline.create_with_fallback retries without it if refused).
+ENV_ALWAYS_TYPES = ("spark_python_task", "python_wheel_task", "dbt_task")
+ENV_TASK_TYPES = ENV_ALWAYS_TYPES + ("notebook_task",)
 CLONE_SUFFIX = " [serverless]"
 TAG_ORIGIN = "smct_origin_job_id"
 TAG_CLONE = "smct_clone"
@@ -113,9 +117,14 @@ def to_serverless(settings: Dict[str, Any], *, clone: bool = True, origin_job_id
     envs = [e for e in s.get("environments", []) or []]
     for i, deps in enumerate(distinct, 1):
         ekey = "smct_env" if len(distinct) == 1 else f"smct_env_{i}"
-        envs.append({"environment_key": ekey, "spec": {"client": ENV_CLIENT_VERSION, "dependencies": list(deps)}})
+        spec = {"environment_version": ENV_CLIENT_VERSION}
+        if deps:
+            spec["dependencies"] = list(deps)
+        envs.append({"environment_key": ekey, "spec": spec})
         for t in s["tasks"]:
-            if env_for_task.get(t["task_key"]) == deps and any(k in t for k in ENV_TASK_TYPES):
+            if env_for_task.get(t["task_key"]) != deps:
+                continue
+            if any(k in t for k in ENV_ALWAYS_TYPES) or ("notebook_task" in t and deps):
                 t["environment_key"] = ekey
     if envs:
         s["environments"] = envs
@@ -156,3 +165,27 @@ def promote_settings(original: Dict[str, Any], migrated: Dict[str, Any]) -> Dict
 
 def canonical_hash(settings: Dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(settings, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+BASELINE_SUFFIX = " [classic-baseline]"
+BASELINE_TAG = "smct_baseline"
+
+
+def baseline_settings(original: Dict[str, Any], origin_job_id: Any) -> Dict[str, Any]:
+    """An unscheduled, silent copy of the ORIGINAL job that keeps its classic compute.
+
+    A/B validation runs this copy instead of the production job, so alerts, notifications and the original's run history
+    are never touched by validation. The caller deletes it when the comparison is finished.
+    """
+    s = copy.deepcopy(original)
+    s.pop("job_id", None)
+    for k in ("schedule", "trigger", "continuous", "email_notifications", "webhook_notifications",
+              "notification_settings", "deployment", "health"):
+        s.pop(k, None)
+    s["name"] = s.get("name", "job") + BASELINE_SUFFIX
+    s["max_concurrent_runs"] = 1
+    tags = dict(s.get("tags") or {})
+    tags[BASELINE_TAG] = "true"
+    tags[TAG_ORIGIN] = str(origin_job_id)
+    s["tags"] = tags
+    return s
