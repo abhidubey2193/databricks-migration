@@ -1,0 +1,64 @@
+# Serverless Migration Control Tower - Databricks Asset Bundle
+#   databricks bundle validate -t dev
+#   databricks bundle deploy   -t dev -var="warehouse_id=<sql warehouse id>"
+#   databricks bundle run smct_discover -t dev
+#   databricks bundle run smct_app -t dev          # starts the web app
+bundle:
+  name: serverless-migration-control-tower
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:            {description: "UC catalog for SMCT tables", default: main}
+  schema:             {description: "UC schema for SMCT tables", default: smct}
+  warehouse_id:       {description: "SQL warehouse the app uses to read tables / write approvals"}
+  mount_map:          {description: "JSON {\"/mnt/raw\": \"/Volumes/cat/schema/raw\"} - rewrites DBFS mount paths", default: "{}"}
+  ansi:               {description: "try = rewrite CAST->try_cast | disable = set spark.sql.ansi.enabled=false", default: try}
+  performance_target: {description: "PERFORMANCE_OPTIMIZED | STANDARD (empty = workspace default)", default: ""}
+  target_param:       {description: "Job parameter name that redirects output schema (A/B sandbox mode); empty = restore mode", default: ""}
+  allow_restore:      {description: "Opt in to restore-mode A/B validation (re-runs jobs on prod tables)", default: "false"}
+  validation_catalog: {description: "Catalog for A/B shadow schemas (default = catalog)", default: ""}
+  batch_size:         {description: "0 = migrate whole job; N = dependency-ordered batches of N tasks", default: "0"}
+  batch_upto:         {description: "How many batches to include (0 = all)", default: "0"}
+  backup_dir:         {description: "Where original job JSON is stored before promotion", default: /Workspace/Shared/smct/backups}
+  migrated_dir:       {description: "Where rewritten notebook copies go (originals untouched)", default: /Workspace/Shared/smct/migrated}
+  bundle_out_dir:     {description: "Where generated bundle YAML for migrated jobs goes", default: /Workspace/Shared/smct/generated_bundles}
+  team_tag:           {description: "Cluster/job tag used for per-team cost rollups", default: team}
+  guard_schedule_status: {description: "PAUSED | UNPAUSED for the 30-minute duplicate-schedule guard", default: PAUSED}
+
+resources:
+  schemas:
+    smct:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: "Serverless Migration Control Tower state (inventory, findings, events, validation, cost views)"
+      grants:
+        - principal: ${resources.apps.smct_app.service_principal_client_id}
+          privileges: [USE_SCHEMA, SELECT, MODIFY]
+
+  apps:
+    smct_app:
+      name: smct-control-tower
+      description: "Fleet migration tracker, approvals, validation and cost"
+      source_code_path: .
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+
+sync:
+  exclude:
+    - tests/**
+    - docs/**
+    - "**/__pycache__/**"
+
+targets:
+  dev:
+    mode: development
+    default: true
+  prod:
+    mode: production
+    variables:
+      guard_schedule_status: UNPAUSED

@@ -1,0 +1,13 @@
+[project]
+name = "serverless-migration-control-tower"
+version = "1.0.0"
+description = "Fleet-wide classic -> serverless migration tracker, remediator, A/B validator and cost tracker for Databricks"
+requires-python = ">=3.10"
+dependencies = []                       # core library is stdlib-only; databricks-sdk is imported lazily at runtime
+
+[project.optional-dependencies]
+runtime = ["databricks-sdk>=0.40"]
+app = ["streamlit>=1.37", "pandas", "databricks-sdk>=0.40"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

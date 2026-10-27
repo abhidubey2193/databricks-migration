@@ -1,0 +1,141 @@
+"""Rule catalogue: every finding the scanners can emit, with remediation text.
+
+Keeping the catalogue in one place makes the limitation coverage (L1..L13) auditable:
+`python -m smc.cli coverage` prints it.
+"""
+from __future__ import annotations
+
+from typing import Dict
+from .models import BLOCKER, WARNING, INFO
+
+# rule_id -> (limitation, severity, auto_fixable, keep_on_classic, message, remediation)
+RULES: Dict[str, tuple] = {
+    # --- L3 init scripts
+    "L3.INIT_SCRIPT": ("L3", WARNING, True, False,
+        "Cluster uses init scripts; init scripts are not supported on serverless.",
+        "Translate pip installs to the serverless environment spec; review unsupported lines."),
+    "L3.INIT_UNREADABLE": ("L3", BLOCKER, False, False,
+        "Init script location could not be read (S3/DBFS/Volume access).",
+        "Grant read access to the location or paste the script into smc config `init_script_overrides`."),
+    "L3.INIT_UNSUPPORTED_LINE": ("L3", BLOCKER, False, False,
+        "Init script contains OS-level changes (apt/yum/wget/cp/export) with no serverless equivalent.",
+        "Move native deps to a wheel, move env vars to job parameters / secrets, or keep on classic."),
+    # --- L4 hard blockers
+    "L4.CUSTOM_IMAGE": ("L4", BLOCKER, False, True,
+        "Cluster uses a custom Docker image.",
+        "Extract the Python deps into the serverless environment spec; keep on classic if the image carries native/OS deps."),
+    "L4.ML_RUNTIME": ("L4", BLOCKER, False, False,
+        "ML Runtime cluster (spark_version contains '-ml').",
+        "Install the needed ML libraries via the environment spec (or use serverless GPU for DL); validate with A/B run."),
+    "L4.OLD_DBR": ("L4", BLOCKER, False, False,
+        "Databricks Runtime below 13 - code was never validated on Spark Connect.",
+        "Upgrade to DBR 15.4 LTS on classic first, fix breakages, then migrate."),
+    "L4.INSTANCE_PROFILE": ("L4", BLOCKER, False, False,
+        "Cluster uses an instance profile (IAM role) for storage access.",
+        "Replace with Unity Catalog storage credential + external location, then re-run scan."),
+    # --- L5 libraries
+    "L5.EGG": ("L5", BLOCKER, False, False,
+        "Library is an egg - eggs are not supported on serverless.",
+        "Rebuild as a wheel (`python -m build`) and reference the .whl from a UC Volume."),
+    "L5.JAR": ("L5", BLOCKER, False, False,
+        "JAR library attached to a Python/SQL/notebook task.",
+        "Replace with a PyPI package, or keep the JVM-dependent task on classic (mixed jobs are allowed)."),
+    "L5.MAVEN": ("L5", BLOCKER, False, False,
+        "Maven library attached; Maven coordinates cannot be installed on serverless.",
+        "Find a Python equivalent or keep the task on classic."),
+    "L5.CRAN": ("L5", BLOCKER, False, True,
+        "CRAN (R) library - R is not supported on serverless.", "Keep on classic or rewrite in PySpark/SQL."),
+    "L5.WHL_MAPPED": ("L5", INFO, True, False,
+        "Wheel/PyPI library mapped into the serverless environment spec.", "Applied automatically."),
+    "L5.WHL_LOCATION": ("L5", BLOCKER, False, False,
+        "Wheel lives on DBFS root; serverless needs a UC Volume or Workspace path.",
+        "Copy the wheel to /Volumes/<catalog>/<schema>/<vol>/ and update the path."),
+    # --- L6 code blockers
+    "L6.CACHE": ("L6", BLOCKER, True, False,
+        "DataFrame.cache()/persist()/unpersist() is not supported on serverless.",
+        "Removed automatically (performance hint only). Materialise to Delta if the data is reused heavily."),
+    "L6.CACHE_TABLE": ("L6", BLOCKER, True, False,
+        "spark.catalog.cacheTable/clearCache or SQL CACHE TABLE is not supported.",
+        "Commented out automatically; CACHE TABLE .. AS SELECT becomes a TEMP VIEW."),
+    "L6.CHECKPOINT": ("L6", BLOCKER, True, False,
+        "DataFrame.checkpoint()/localCheckpoint() is not supported.",
+        "Rewritten to materialise the DataFrame to a Delta table and re-read it."),
+    "L6.GLOBAL_TEMP_VIEW": ("L6", BLOCKER, True, False,
+        "Global temp views are not supported.",
+        "Rewritten to a session TEMP VIEW. Review if another notebook reads global_temp.<name>."),
+    "L6.MOUNT_API": ("L6", BLOCKER, True, False,
+        "dbutils.fs.mount/unmount/updateMount/refreshMounts is not supported.",
+        "Mount call removed; /mnt paths rewritten to UC Volumes when a `mount_map` entry exists."),
+    "L6.MOUNT_PATH": ("L6", BLOCKER, True, False,
+        "Code reads /mnt or dbfs:/mnt mount paths (DBFS mounts are not supported on serverless).",
+        "Provide a `mount_map` (/mnt/x -> /Volumes/cat/schema/x) to rewrite automatically."),
+    "L6.RDD": ("L6", BLOCKER, False, False,
+        "RDD / SparkContext APIs (sc., .rdd, parallelize) are not available on serverless.",
+        "Rewrite with the DataFrame API."),
+    "L6.SPARK_CONF": ("L6", WARNING, False, False,
+        "spark.conf.set of a property serverless does not allow (it will raise).",
+        "Remove it or move behaviour into code. Allowed list is configurable in smc.rules.ALLOWED_SPARK_CONFS."),
+    # --- L7
+    "L7.SCALA": ("L7", BLOCKER, False, False,
+        "Scala code cannot run on serverless.", "See classification: rewrite to PySpark/SQL or keep on classic."),
+    "L7.R": ("L7", BLOCKER, False, True,
+        "R code cannot run on serverless.", "Keep on classic or rewrite in PySpark/SQL."),
+    "L7.JAR_TASK": ("L7", BLOCKER, False, True,
+        "spark_jar_task requires a JVM classic cluster.", "Keep this task on classic (mixed-compute jobs are allowed)."),
+    "L4.SPARK_SUBMIT": ("L4", BLOCKER, False, True,
+        "spark_submit_task is not supported on serverless.",
+        "Convert to a spark_python_task / python_wheel_task, or keep this task on classic."),
+    "L4.STORAGE_CREDS_IN_CONF": ("L4", BLOCKER, False, False,
+        "Storage credentials are set in cluster Spark conf (fs.s3a / fs.azure / google SA); serverless ignores them.",
+        "Use Unity Catalog storage credentials + external locations / volumes."),
+    # --- L11
+    "L11.LOG_DELIVERY": ("L11", INFO, False, False,
+        "Cluster log delivery is configured; serverless has no cluster log delivery.",
+        "Use job run output / system tables / event logs instead; confirm no compliance requirement."),
+    "L11.SSH": ("L11", INFO, False, False,
+        "SSH public keys configured; SSH access does not exist on serverless.", "Use notebooks/Repl debugging instead."),
+    "L11.SPARK_CONF_DROPPED": ("L11", INFO, False, False,
+        "Cluster Spark configuration is dropped on serverless.", "Verify behaviour; ANSI/timezone can be set in code."),
+    "L11.ENV_VARS_DROPPED": ("L11", WARNING, False, False,
+        "Cluster environment variables are dropped on serverless.",
+        "Pass values as job parameters or read from secrets."),
+    "L11.CLUSTER_POLICY": ("L11", INFO, False, False,
+        "Cluster policy attached; serverless uses budget policies / environment instead.", "Review governance requirements."),
+    # --- L13
+    "L13.STREAM_DEFAULT_TRIGGER": ("L13", BLOCKER, True, False,
+        "Streaming query without a trigger (or processingTime/continuous). Serverless only supports availableNow.",
+        "`.trigger(availableNow=True)` inserted automatically - confirm batch cadence is acceptable."),
+    "L13.ANSI_CAST": ("L13", WARNING, True, False,
+        "ANSI mode is ON by default on serverless: invalid CAST raises instead of returning NULL.",
+        "CAST( rewritten to try_cast( automatically."),
+    "L13.ANSI_DIVIDE": ("L13", WARNING, False, False,
+        "Division can raise DIVIDE_BY_ZERO under ANSI mode.", "Use try_divide(a, b)."),
+    "L13.ANSI_ELEMENT": ("L13", WARNING, False, False,
+        "Array/map element access can raise under ANSI mode.", "Use try_element_at(...)."),
+    "L13.ANSI_DATE": ("L13", WARNING, False, False,
+        "to_date/to_timestamp raise on malformed input under ANSI mode.", "Use try_to_timestamp(...)."),
+    "L13.ANSI_SUM": ("L13", INFO, False, False,
+        "sum()/avg() can overflow-raise under ANSI mode.", "Use try_sum / try_avg for untrusted data."),
+    # --- L10 / L9 / L2 / L8 (operational)
+    "L10.DUPLICATE_SCHEDULE": ("L10", BLOCKER, True, False,
+        "Original job and its serverless clone both have an active schedule/trigger.",
+        "Schedule guard pauses the clone (or the extra trigger)."),
+    "L9.BUNDLE_MANAGED": ("L9", WARNING, True, False,
+        "Job is managed by an Asset Bundle: in-place changes will be overwritten on next deploy.",
+        "SMCT writes the migrated definition to generated_bundles/ - commit it to Git."),
+    "L9.GIT_SOURCE": ("L9", INFO, False, False,
+        "Job tasks run from a Git source; code rewrites must be committed to that repo.", "Apply patch files to Git."),
+    "L2.LARGE_JOB": ("L2", INFO, True, False,
+        "Job has more than 10 tasks (the /compute agent refuses these).",
+        "SMCT migrates it with its own transformer (no cap) or in batches of <=10 tasks."),
+}
+
+# Properties accepted by serverless spark.conf.set (per Databricks docs; verify for your release).
+ALLOWED_SPARK_CONFS = {
+    "spark.sql.legacy.timeParserPolicy", "spark.sql.session.timeZone",
+    "spark.sql.shuffle.partitions", "spark.sql.ansi.enabled",
+    "spark.sql.files.maxPartitionBytes", "spark.databricks.execution.timeout",
+    "spark.databricks.io.cache.enabled",
+}
+
+MIN_SERVERLESS_DBR = 13

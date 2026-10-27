@@ -1,0 +1,1334 @@
+{
+ "jobs": [
+  {
+   "job_id": 1,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "clean_etl",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 2,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "cache_heavy",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/cache_heavy"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 3,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "global_view",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/global_view"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 4,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "mount_user",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/mount_user"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 5,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "scala_simple",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/scala_simple"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 6,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "scala_hard",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/scala_hard"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 7,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "r_report",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/r_report"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 8,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "instance_profile",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2,
+       "aws_attributes": {
+        "instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/etl"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 9,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "egg_lib",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc",
+      "libraries": [
+       {
+        "egg": "dbfs:/libs/legacy.egg"
+       },
+       {
+        "pypi": {
+         "package": "pandas==2.1.0"
+        }
+       }
+      ]
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 10,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "init_pip_only",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2,
+       "init_scripts": [
+        {
+         "dbfs": {
+          "destination": "dbfs:/init/pip_only.sh"
+         }
+        }
+       ],
+       "spark_env_vars": {
+        "STAGE": "prod"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 11,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "init_native",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2,
+       "init_scripts": [
+        {
+         "dbfs": {
+          "destination": "dbfs:/init/native.sh"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 12,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "big_dag_25_tasks",
+    "tasks": [
+     {
+      "task_key": "step_00",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_01",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_00"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_02",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_01"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_03",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_02"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_04",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_03"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_05",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_04"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_06",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_05"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_07",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_06"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_08",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_07"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_09",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_08"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_10",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_09"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_11",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_10"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_12",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_11"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_13",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_12"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_14",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_13"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_15",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_14"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_16",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_15"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_17",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_16"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_18",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_17"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_19",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_18"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_20",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_19"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_21",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_20"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_22",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_21"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_23",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_22"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     },
+     {
+      "task_key": "step_24",
+      "notebook_task": {
+       "notebook_path": "/demo/big_task"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "step_23"
+       }
+      ],
+      "libraries": [
+       {
+        "pypi": {
+         "package": "requests==2.31.0"
+        }
+       }
+      ]
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 13,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "streaming_default_trigger",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/streaming"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 14,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "ansi_sql",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/ansi_sql"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 15,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "docker_image",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2,
+       "docker_image": {
+        "url": "myreg/custom:1.0"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 16,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "ml_runtime",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-cpu-ml-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 17,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "legacy_dbr_10_4",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "10.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 18,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "mixed_jar_and_python",
+    "tasks": [
+     {
+      "task_key": "py",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     },
+     {
+      "task_key": "jvm",
+      "spark_jar_task": {
+       "main_class_name": "com.acme.Main"
+      },
+      "job_cluster_key": "jc",
+      "depends_on": [
+       {
+        "task_key": "py"
+       }
+      ]
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 19,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "bundle_managed",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ],
+    "deployment": {
+     "kind": "BUNDLE",
+     "metadata_file_path": "/Workspace/.bundle/x/state/metadata.json"
+    }
+   }
+  },
+  {
+   "job_id": 20,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "already_serverless",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "environment_key": "e"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "environments": [
+     {
+      "environment_key": "e",
+      "spec": {
+       "client": "2"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 21,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "rdd_user",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/rdd_user"
+      },
+      "job_cluster_key": "jc"
+     }
+    ],
+    "tags": {
+     "team": "data-eng"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "job_clusters": [
+     {
+      "job_cluster_key": "jc",
+      "new_cluster": {
+       "spark_version": "15.4.x-scala2.12",
+       "node_type_id": "Standard_DS3_v2",
+       "num_workers": 2
+      }
+     }
+    ]
+   }
+  },
+  {
+   "job_id": 22,
+   "creator_user_name": "owner@example.com",
+   "settings": {
+    "name": "clean_etl [serverless]",
+    "tasks": [
+     {
+      "task_key": "t",
+      "notebook_task": {
+       "notebook_path": "/demo/clean_etl"
+      },
+      "environment_key": "e"
+     }
+    ],
+    "tags": {
+     "smct_clone": "true",
+     "smct_origin_job_id": "1"
+    },
+    "max_concurrent_runs": 1,
+    "schedule": {
+     "quartz_cron_expression": "0 0 2 * * ?",
+     "timezone_id": "UTC",
+     "pause_status": "UNPAUSED"
+    },
+    "environments": [
+     {
+      "environment_key": "e",
+      "spec": {
+       "client": "2"
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "notebooks": {
+  "/demo/clean_etl": {
+   "source": "# Databricks notebook source\ndf = spark.read.table(\"raw.orders\")\ndf.write.mode(\"overwrite\").saveAsTable(\"silver.orders\")",
+   "language": "python"
+  },
+  "/demo/cache_heavy": {
+   "source": "# Databricks notebook source\ndf = spark.read.table(\"raw.events\")\ndf = df.cache()\ndf.count()\nagg = df.groupBy(\"k\").count().persist()\nagg.write.mode(\"overwrite\").saveAsTable(\"gold.event_counts\")\nagg.unpersist()\ndf2 = df.checkpoint()",
+   "language": "python"
+  },
+  "/demo/global_view": {
+   "source": "# Databricks notebook source\ndf = spark.table(\"raw.a\")\ndf.createGlobalTempView(\"shared_a\")\nspark.sql(\"select * from global_temp.shared_a\").write.saveAsTable(\"silver.a2\")",
+   "language": "python"
+  },
+  "/demo/mount_user": {
+   "source": "# Databricks notebook source\ndbutils.fs.mount(\n  source=\"s3a://bucket/raw\",\n  mount_point=\"/mnt/raw\",\n  extra_configs={\"x\": \"y\"})\ndf = spark.read.parquet(\"/mnt/raw/customers\")\ndf.write.mode(\"append\").saveAsTable(\"silver.customers\")",
+   "language": "python"
+  },
+  "/demo/scala_simple": {
+   "source": "// Databricks notebook source\nval df = spark.read.table(\"raw.sales\")\n  .filter($\"amount\" > 0)\n  .groupBy(\"region\")\n  .agg(sum(\"amount\").as(\"total\"))\ndf.write.mode(\"overwrite\").saveAsTable(\"gold.sales_by_region\")",
+   "language": "scala"
+  },
+  "/demo/scala_hard": {
+   "source": "// Databricks notebook source\ncase class Rec(id: Long, v: String)\nval ds = spark.read.table(\"raw.r\").as[Rec]\nds.map { r => r.copy(v = r.v.trim) }.write.saveAsTable(\"silver.r\")",
+   "language": "scala"
+  },
+  "/demo/r_report": {
+   "source": "# Databricks notebook source\nlibrary(SparkR)\ndf <- sql('select * from gold.sales_by_region')",
+   "language": "r"
+  },
+  "/demo/streaming": {
+   "source": "# Databricks notebook source\nq = (spark.readStream.table(\"raw.stream_in\")\n  .writeStream.format(\"delta\")\n  .option(\"checkpointLocation\", \"/Volumes/main/chk/s1\")\n  .toTable(\"silver.stream_out\"))",
+   "language": "python"
+  },
+  "/demo/ansi_sql": {
+   "source": "-- Databricks notebook source\nCREATE OR REPLACE TABLE silver.ratios AS\nSELECT CAST(a AS INT) AS ai, a / b AS ratio, to_date(d, 'yyyy-MM-dd') AS dt, sum(x) AS sx FROM raw.t GROUP BY ALL",
+   "language": "sql"
+  },
+  "/demo/rdd_user": {
+   "source": "# Databricks notebook source\nrdd = spark.sparkContext.parallelize([1,2,3])\nprint(rdd.count())",
+   "language": "python"
+  },
+  "/demo/big_task": {
+   "source": "# Databricks notebook source\nspark.table(\"raw.x\").write.mode(\"overwrite\").saveAsTable(\"silver.x_out\")",
+   "language": "python"
+  }
+ },
+ "init_scripts": {
+  "dbfs:/init/pip_only.sh": "#!/bin/bash\n/databricks/python/bin/pip install requests==2.31.0 pyyaml\n",
+  "dbfs:/init/native.sh": "#!/bin/bash\napt-get install -y libgdal-dev\npip install fiona\nexport GDAL_DATA=/usr/share/gdal\n"
+ },
+ "clusters": {}
+}

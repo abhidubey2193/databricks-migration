@@ -1,0 +1,11 @@
+command: ["streamlit", "run", "app/app.py", "--server.headless", "true"]
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: SMC_CATALOG
+    value: "main"
+  - name: SMC_SCHEMA
+    value: "smct"
+  # comma separated emails allowed to click approve; "*" = every signed-in user (demo only)
+  - name: SMC_APPROVERS
+    value: "*"

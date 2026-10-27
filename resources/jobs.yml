@@ -1,0 +1,426 @@
+# SMCT job definitions (serverless). Parameters flow from databricks.yml variables.
+resources:
+  jobs:
+    smct_discover:
+      name: smct_discover
+      description: "Inventory every job/cluster, scan notebooks+configs, score readiness, plan waves (L1,L3-L7,L9,L11,L13)"
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+      queue: {enabled: true}
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: init
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "init"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+        - task_key: discover
+          environment_key: smct_env
+          depends_on:
+            - task_key: init
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "discover"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+
+    smct_migrate_validate:
+      name: smct_migrate_validate
+      description: "For APPROVED workloads: rewrite code, build serverless clone (no schedule), run A/B validation (L2,L5,L6,L8,L10,L13)"
+      queue: {enabled: true}
+      max_concurrent_runs: 1
+      parameters:
+        - name: workload_ids
+          default: ""
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: migrate
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "migrate"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+            - "--workload_ids"
+            - "{{job.parameters.workload_ids}}"
+        - task_key: validate
+          environment_key: smct_env
+          depends_on:
+            - task_key: migrate
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "validate"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+            - "--workload_ids"
+            - "{{job.parameters.workload_ids}}"
+
+    smct_promote:
+      name: smct_promote
+      description: "For PROMOTE_APPROVED workloads: back up, apply serverless definition to the original job, emit bundle YAML (L8,L9)"
+      queue: {enabled: true}
+      max_concurrent_runs: 1
+      parameters:
+        - name: workload_ids
+          default: ""
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: promote
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "promote"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+            - "--workload_ids"
+            - "{{job.parameters.workload_ids}}"
+        - task_key: guard_after_promote
+          environment_key: smct_env
+          depends_on:
+            - task_key: promote
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "guard"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+
+    smct_rollback:
+      name: smct_rollback
+      description: "Restore the exact classic job definition for ROLLBACK_REQUESTED workloads"
+      queue: {enabled: true}
+      parameters:
+        - name: workload_ids
+          default: ""
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: rollback
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "rollback"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+            - "--workload_ids"
+            - "{{job.parameters.workload_ids}}"
+
+    smct_guard:
+      name: smct_guard
+      description: "L10 duplicate-schedule guard: pause any serverless clone whose original is also active"
+      schedule:
+        quartz_cron_expression: "0 0/30 * * * ?"
+        timezone_id: UTC
+        pause_status: ${var.guard_schedule_status}
+      queue: {enabled: true}
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: guard
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "guard"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"
+
+    smct_cost:
+      name: smct_cost
+      description: "Refresh DBU/list-price cost views: before vs after per job, per team (L12)"
+      schedule:
+        quartz_cron_expression: "0 30 6 * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED
+      queue: {enabled: true}
+      environments:
+        - environment_key: smct_env
+          spec:
+            client: "2"
+            dependencies:
+              - databricks-sdk>=0.40
+      tasks:
+        - task_key: cost
+          environment_key: smct_env
+          spark_python_task:
+            python_file: ../src/jobs/entry.py
+            parameters:
+            - "--stage"
+            - "cost"
+            - "--catalog"
+            - "${var.catalog}"
+            - "--schema"
+            - "${var.schema}"
+            - "--mount_map"
+            - "${var.mount_map}"
+            - "--ansi"
+            - "${var.ansi}"
+            - "--performance_target"
+            - "${var.performance_target}"
+            - "--target_param"
+            - "${var.target_param}"
+            - "--allow_restore"
+            - "${var.allow_restore}"
+            - "--validation_catalog"
+            - "${var.validation_catalog}"
+            - "--batch_size"
+            - "${var.batch_size}"
+            - "--batch_upto"
+            - "${var.batch_upto}"
+            - "--backup_dir"
+            - "${var.backup_dir}"
+            - "--migrated_dir"
+            - "${var.migrated_dir}"
+            - "--bundle_out_dir"
+            - "${var.bundle_out_dir}"
+            - "--team_tag"
+            - "${var.team_tag}"

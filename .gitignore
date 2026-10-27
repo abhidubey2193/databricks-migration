@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.databricks/
+.venv/
+.env
+*.zip
+.pytest_cache/
